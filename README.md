@@ -136,17 +136,17 @@ mode3_clean.py
 - 청소 종료 후 다음 동작 연결
 
 6. Sensor & Control Nodes
-> lidar_node.py
+- lidar_node.py
 LDS-01에서 수신한 LaserScan 데이터를 처리하여 로봇 주변의 거리 정보를 생성한다.
-> imusensor.py
+- imusensor.py
 IMU로부터 로봇의 자세 및 방향 정보를 획득한다.
-> imu_bridge_node.py
+- imu_bridge_node.py
 IMU 데이터를 ROS 환경에서 사용할 수 있도록 /imu/data 형태의 ROS Topic으로 연결한다.
-> odom.py
+- odom.py
 Wheel Encoder 및 센서 정보를 이용하여 Mobile Platform의 이동 상태를 관리한다.
-> serial_bridge_node.py
+- serial_bridge_node.py
 Jetson Nano와 Mobile Platform의 하위 제어 장치 사이의 Serial 통신을 담당한다.
-> pump_control_node.py
+- pump_control_node.py
 Water Pump를 제어하여 청소 단계에서 세정액을 자동으로 분사한다.
 
 7. Repository Structure
