@@ -1,0 +1,54 @@
+# mode4_param.yaml
+#
+# mode4_align_node.py 튜닝 파라미터 모음.
+# 이 파일은 calibrate_offset.py가 자동 생성하는 mode4_offset.yaml(목표
+# x,y,z,yaw 값)과는 별개다 -- 저건 "어디로 갈지", 이 파일은 "어떻게 갈지"를
+# 정의한다.
+#
+# mode1_param.yaml과 동일한 패턴: <node> 태그 안에서 ns 없이
+#   <rosparam file="$(find final_git)/param/mode4_param.yaml" command="load" />
+# 로 로드하면 아래 키들이 이 노드의 private 파라미터(~xxx)로 그대로 들어감.
+# 그래서 최상위에 노드 이름으로 감싸지 않고 flat하게 나열함.
+#
+# 노드 실행 시 커맨드라인으로 개별 오버라이드도 가능:
+#   rosrun final_git mode4_align_node.py _linear_speed:=0.08
+
+# ---------------- 오프셋 파일 경로 ----------------
+# calibrate_offset.py가 저장한 목표값(raw x,y,z,yaw)이 담긴 yaml 위치.
+offset_yaml_path: "$(env HOME)/catkin_ws/src/final_git/param/mode4_offset.yaml"
+
+# ---------------- 카메라 장착 각도 ----------------
+# 카메라가 수평 대비 아래로 기울어진 각도 (deg). camera_node.py와 반드시
+# 같은 실측값을 써야 함. 카메라 각도를 실제로 조정했다면 여기만 바꾸면
+# 되고, calibrate_offset.py를 다시 돌릴 필요는 없음 (raw 값을 저장해뒀으므로).
+tilt_deg: 55.0
+
+# ---------------- 정렬 완료 허용오차 ----------------
+pos_tolerance: 0.005        # m, x / z_ground 각각 허용오차 (±0.5cm)
+yaw_tolerance_deg: 3.0      # deg, 최종 자세 허용오차 (±2도)
+
+# 허용오차 이내 판정이 이 프레임 수만큼 연속되어야 "정렬 완료"로 확정.
+# 값이 작으면 노이즈로 오판(false positive)하기 쉽고, 너무 크면 완료
+# 판정이 늦어짐. camera_node 발행 주기(15Hz) 기준 10프레임 ≈ 0.67초.
+stable_count_required: 10
+
+# ---------------- 캡처(정지 후 평균) 설정 ----------------
+capture_samples: 8          # 한 번의 CAPTURE/YAW_ALIGN_CAPTURE에서 모을 프레임 수
+capture_timeout: 2.0        # sec, 이 시간 안에 samples를 못 채워도 있는 것만으로 진행
+tag_lost_timeout: 1.5       # sec, 이 시간 이상 태그를 못 보면 TAG_LOST_SEARCH로 전환
+max_iterations: 6           # CAPTURE->ROTATE->DRIVE 반복 최대 횟수, 초과 시 정렬 실패 처리
+
+# 로봇 로컬 좌표 변환 시 yaw 보정 부호. 실측 테스트에서 로봇이 반대
+# 방향으로 회전하면 이 값을 -1.0으로 뒤집으면 됨.
+yaw_correction_sign: 1.0
+
+# ---------------- odom 기반 회전/전진 제어 ----------------
+odom_goal_tolerance: 0.02       # m, DRIVE 단계에서 웨이포인트 도착 판정 거리
+odom_angle_tolerance: 0.03      # rad (~1.7deg), ROTATE 단계 회전 완료 판정 각도
+
+linear_speed: 0.10          # m/s, 전진 속도
+angular_speed: 0.3          # rad/s, 회전 속도
+
+# ---------------- 태그 탐색(TAG_LOST_SEARCH) ----------------
+search_angular_speed: 0.15      # rad/s, 탐색 회전 속도 (전진/회전 대비 느리게)
+search_max_angle_deg: 30.0      # deg, 한쪽 방향으로 훑는 최대 각도 (넘으면 반대로 훑음)
