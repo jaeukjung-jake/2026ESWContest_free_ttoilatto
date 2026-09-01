@@ -1,0 +1,33 @@
+<launch>
+    <!--
+        로봇의 행동(Mode)을 정의하는 노드들을 실행합니다.
+        - Mode 1: 복도 주행
+        - Mode 2: (추후 추가)
+        - ...
+    -->
+
+    <!-- Mode 1 (복도 주행) 노드 실행 -->
+    <node name="mode1_nav_node" pkg="final_git" type="mode1_node.py" output="screen">
+        <!-- 파라미터를 YAML 파일에서 한 번에 불러오기 -->
+        <rosparam file="$(find final_git)/param/mode1_param.yaml" command="load" />
+    </node>
+
+    <!-- Mode 2 (변기 앞으로 이동) 노드 실행 -->
+    <node name="mode2_stall_node" pkg="final_git" type="mode2_stall.py" output="screen">
+        <!-- 파라미터를 YAML 파일에서 한 번에 불러오기 -->
+        <rosparam file="$(find final_git)/param/mode2_param.yaml" command="load" />
+    </node>
+
+    <!-- Mode 3 (로봇팔로 청소) 노드 실행 -->
+    <node name="mode3_clean_node" pkg="final_git" type="mode3_clean.py" output="screen">
+        <!-- 파라미터를 YAML 파일에서 한 번에 불러오기 -->
+        <!--rosparam file="$(find final_git)/param/mode3_param.yaml" command="load" /-->
+    </node>
+
+    <!-- Mode 4 (초기화 정렬) 노드 실행 -->
+    <node name="mode4_align_node" pkg="final_git" type="mode4_align.py" output="screen">
+        <!-- 파라미터를 YAML 파일에서 한 번에 불러오기 -->
+        <!-- rosparam file="$(find final_git)/param/mode4_param.yaml" command="load" /-->
+    </node>
+
+</launch>

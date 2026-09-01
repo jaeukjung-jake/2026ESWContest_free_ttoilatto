@@ -1,0 +1,20 @@
+<launch>
+    <!--
+        final_project 로봇의 전체 시스템을 실행하는 최상위 launch 파일.
+        센서 드라이버와 주행 로직을 각각의 launch 파일로 분리하여 포함합니다.
+
+        [참고]
+        imusensor.py는 별도의 Python3.8 가상환경에서 실행되어야 합니다.
+        sensors.launch 파일은 'run_imusensor.sh' 셔틀 스크립트를 통해 이를 자동으로 처리합니다.
+    -->
+    
+    <!-- 1. 센서 관련 노드들 실행 -->
+    <include file="$(find final_git)/launch/sensors.launch" />
+    
+    <!-- 2. 주행 모드 및 위치 추정 관련 노드들 실행 -->
+    <include file="$(find final_git)/launch/modes.launch" />
+
+    <!-- 3. 전체 모드를 지휘하는 Mode Manager 실행 -->
+    <node name="mode_manager_node" pkg="final_git" type="mode_manager.py" output="screen" />
+
+</launch>

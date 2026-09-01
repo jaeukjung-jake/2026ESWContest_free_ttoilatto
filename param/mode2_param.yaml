@@ -1,0 +1,103 @@
+# mode2_param.yaml
+#
+# mode2_stall_node.py (변기칸 진입/탈출, v7: 라이다 포인트클라우드 벽 인식 +
+# Stanley 조향 + 타원 정지 경계 + ALIGN/BACKOFF 재시도 + MQTT 뚜껑 제어)
+# 튜닝 파라미터 모음.
+#
+# mode1_param.yaml과 동일한 패턴: <node> 태그 안에서 ns 없이
+#   <rosparam file="$(find final_git)/param/mode2_param.yaml" command="load" />
+# 로 로드하면 아래 키들이 이 노드의 private 파라미터(~xxx)로 그대로 들어감.
+# 그래서 최상위에 노드 이름으로 감싸지 않고 flat하게 나열함.
+#
+# 노드 실행 시 커맨드라인으로 개별 오버라이드도 가능:
+#   rosrun final_git mode2_stall_node.py _enter_speed:=0.05
+#
+# [주의] 이전 버전(좌우 거리센서 P제어 방식: front_topic/side_kp/angular_sign
+# 등)과는 파라미터 체계가 완전히 다릅니다. 이 파일은 v7 코드가 실제로
+# rospy.get_param(...)으로 읽는 키만 담고 있습니다.
+
+# ---------------- 센서 토픽 / 좌표계 ----------------
+points_topic: "/lidar/front_points"   # std_msgs/Float32MultiArray, [x0,y0,x1,y1,...] (base_link 기준)
+frame_id: "base_link"                 # 디버그 마커(RViz) 좌표계
+
+# ---------------- 제어 루프 / 센서 유효성 ----------------
+control_rate: 20.0            # Hz, step() 제어 루프 주기
+sensor_timeout: 0.5           # sec, 이 시간 이상 포인트 갱신 없으면 끊김으로 간주
+min_points_required: 10       # 이보다 적으면 "포인트 준비 안 됨"으로 판단
+
+# ---------------- MQTT (변기 뚜껑 서보) ----------------
+mqtt_broker: "localhost"      # 브로커 IP (젯슨 자신이면 localhost)
+mqtt_port: 1883
+topic_lid_cmd: "mode2/lid_cmd"  # payload: "ENTER"(뚜껑 열기) / "EXIT"(뚜껑 닫기)
+
+# ---------------- 진입(ENTER) / 탈출(EXIT) 속도 ----------------
+enter_speed: 0.04            # m/s, 진입 시 기준 전진 속도 (오차 크기에 따라 감속됨)
+exit_speed: -0.04            # m/s, 탈출 시 후진 속도 (음수)
+max_angular_speed: 0.8       # rad/s, 조향 각속도 상한
+
+# ---------------- Stanley 조향 게인 ----------------
+k_heading: 1.8               # heading_error 게인 (저속 조향 데드존 때문에 상향됨)
+k_lateral: 6.0                # lateral_offset 게인
+
+# ---------------- 정렬 계산용 샘플 개수 ----------------
+lateral_ref_k: 15            # compute_alignment: t=0 근처 평균낼 점 개수
+dock_point_k: 5              # compute_dock_target: 변기 앞점 평균낼 점 개수
+
+# ---------------- 속도 감속 곡선 (heading/lateral 오차 기반) ----------------
+heading_slowdown_start_deg: 10.0
+heading_stop_deg: 35.0
+lateral_slowdown_start: 0.05
+lateral_stop: 0.20
+min_speed_ratio: 0.25
+
+# ---------------- 조향 필터 ----------------
+steering_smoothing_alpha: 0.4  # 1차 저역통과 필터 계수 (클수록 반응 빠름/덜 부드러움)
+
+# ---------------- 벽 인식 파이프라인: 조각 분리 (build_segments) ----------------
+seg_min_points: 5
+gap_break_dist: 0.20          # m, 이보다 멀어지면 조각 끊음
+angle_threshold_deg: 20.0     # 국소 기울기 급변 임계각
+slope_window: 5               # 국소 기울기 추정에 쓸 최근 점 개수
+cumulative_angle_threshold_deg: 20.0  # 누적 기울기 임계각 (기본은 angle_threshold_deg와 동일)
+
+# ---------------- 벽 인식 파이프라인: 조각 재병합 (merge_adjacent_segments) ----------------
+merge_angle_tolerance_deg: 10.0
+merge_dist_thr: 0.05
+small_segment_max_points: 3
+small_segment_merge_dist: 0.10
+
+# ---------------- 벽 인식 파이프라인: 방향 그룹핑/좌우벽 매칭 ----------------
+angle_tolerance_deg: 8.0      # group_segments_by_direction
+min_group_points: 5           # find_left_right_walls: 그룹 최소 점 개수
+t_tolerance: 0.03             # 마주보는 벽 투영구간 매칭 허용오차
+min_match_ratio: 0.5          # 마주보는 벽 판정 최소 매칭 비율
+
+# ---------------- 정지 경계 (타원, ellipse_clearance_ratio) ----------------
+front_stop_distance: 0.25     # m, 전방 반경 (라이다 최소감지거리 사각지대 회피용으로 상향됨)
+final_dock_distance: 0.10     # m, 정렬 끝난 뒤 최종 접근 목표거리 (front_stop_distance보다 가까움)
+side_stop_distance: 0.30      # m, 좌우 반경
+side_stop_angle_deg: 80.0     # side_stop_distance가 100% 적용되는 기준각(로봇 정면 기준)
+front_center_half_width: 0.12 # m, 정면 좁은 밴드(raw_front_distance/도킹 목표점) 폭의 절반
+pause_after_approach: 1.0     # sec, 도킹 정지 후 안정화 대기시간
+
+# ---------------- 라이다 최소감지거리 사각지대 안전장치 ----------------
+front_dropout_safety_margin: 0.10  # m, 직전 정면거리가 이 마진 이내였는데 포인트가 사라지면 강제 정지
+
+# ---------------- 제자리 회전(ALIGNING) ----------------
+align_heading_tol_deg: 4.0
+align_lateral_tol: 0.02
+align_max_duration: 10.0      # sec, ALIGN/BACKOFF 등 개별 단계 상한시간
+align_min_w: 0.30             # rad/s, 저속 데드존 방지용 최소 각속도
+
+# ---------------- 재접근 재시도 (BACKOFF) ----------------
+align_backoff_dist: 0.2      # m, 재시도용 후진 여유거리 (정지 경계 + 이 값)
+align_max_retries: 3          # v7: 2 -> 3으로 상향
+
+# ---------------- 전체 상한시간 ----------------
+max_enter_duration: 60.0      # sec, ENTER phase 전체 안전 상한시간 (재시도 포함 여유 있게)
+exit_goal_tolerance: 0.03     # m
+exit_max_duration: 10.0       # sec
+
+# ---------------- 디버그 마커 (RViz) ----------------
+enable_debug_markers: true
+point_size: 0.03

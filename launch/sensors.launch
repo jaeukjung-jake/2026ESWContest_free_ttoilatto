@@ -1,0 +1,60 @@
+<launch>
+    <!--
+        센서 드라이버 및 브릿지 노드를 실행합니다.
+        - imu_sensor_driver: IMU 데이터를 UDP로 전송
+        - imu_bridge_node: UDP IMU 데이터를 ROS 토픽으로 변환
+        - serial_bridge_node: 아두이노와 통신하여 모터/엔코더 처리
+        - odom_node: 엔코더+IMU 기반 Dead Reckoning Odometry 계산
+        - lidar_node: 라이다 센서 노드
+        - camera_node: april tag를 인식하는 카메라 노드
+        - pump_control_node: 워터펌프 릴레이(GPIO) 제어
+    -->
+
+    <!-- LDS-01 라이다 드라이버 실행 -->
+    <node pkg="hls_lfcd_lds_driver" type="hlds_laser_publisher" name="hlds_laser_publisher">
+        <param name="port" value="/dev/ttyUSB0"/>
+        <param name="frame_id" value="laser"/>
+    </node>
+
+    <!-- imusensor.py 실행 (가상환경 활성화 셔틀 스크립트 이용) -->
+    <!-- launch-prefix="xterm -e" 를 사용하면 별도 터미널 창에서 실행되어 출력을 따로 볼 수 있습니다. -->
+    <node name="imu_sensor_driver" pkg="final_git" type="run_imusensor.sh" 
+      output="screen" launch-prefix="xterm -e" />
+
+    <!-- imusensor.py가 보내는 UDP 데이터를 ROS /imu/data 토픽으로 변환 -->
+    <node name="imu_bridge_node" pkg="final_git" type="imu_bridge_node.py" output="screen">
+        <param name="frame_id" value="imu_link" />
+        <param name="udp_ip" value="127.0.0.1" />
+        <param name="udp_port" value="5005" />
+    </node>
+
+    <!-- 아두이노와 시리얼 통신. /cmd_vel -> 모터, 엔코더 -> /encoder_ticks -->
+    <node name="serial_bridge_node" pkg="final_git" type="serial_bridge_node.py" output="screen">
+        <param name="port" value="/dev/ttyACM0" />
+        <param name="baudrate" value="115200" />
+    </node>
+
+    <!-- 엔코더+IMU 기반 Dead Reckoning Odometry 계산 -->
+    <node name="odom_node" pkg="final_git" type="odom.py" output="screen">
+        <param name="wheel_radius" value="0.0415" />
+        <param name="ticks_per_rev" value="660" />
+        <param name="odom_frame" value="odom" />
+        <param name="base_frame" value="base_link" />
+        <param name="publish_rate" value="30" />
+    </node>
+
+    <!-- 라이다 센서 노드 실행 -->
+    <node name="lidar_node" pkg="final_git" type="lidar_node.py" output="screen" />
+
+    <!-- 카메라 노드 실행 -->
+    <node name="camera_node" pkg="final_git" type="camera_node.py" output="screen">
+        <param name="show_debug_window" value="false" />
+    </node>
+
+    <!-- 워터펌프 릴레이 제어 (mode3_clean_node가 /pump_cmd 발행) -->
+    <node name="pump_control_node" pkg="final_git" type="pump_control_node.py" output="screen">
+        <param name="pin" value="31" />
+        <param name="active_high" value="true" />
+        <param name="max_on_duration" value="10.0" />
+    </node>
+</launch>
